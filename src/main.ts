@@ -1,11 +1,6 @@
-import {loopHelper, empire} from "./helpers/loopHelper";
-import {initPrototypes} from "./prototypes/initPrototypes";
-import {sandBox} from "./sandbox";
 import {Profiler} from "./Profiler";
 import {TimeoutTracker} from "./TimeoutTracker";
 
-loopHelper.initMemory();
-initPrototypes();
 
 module.exports.loop = function () {
     Game.cache = { structures: {}, hostiles: {}, hostilesAndLairs: {}, mineralCount: {}, labProcesses: {},
@@ -16,8 +11,7 @@ module.exports.loop = function () {
 
     // Init phase - Information is gathered about the game state and game objects instantiated
     Profiler.start("init");
-    loopHelper.initEmpire();
-    let operations = loopHelper.getOperations(empire);
+    let operations = []; //Get the list of operations to process.
     for (let operation of operations) operation.init();
     Profiler.end("init");
 
@@ -39,15 +33,8 @@ module.exports.loop = function () {
 
     // post-operation actions and utilities
     Profiler.start("postOperations");
-    try { empire.actions(); } catch (e) { console.log("error with empire actions\n", e.stack); }
-    try { loopHelper.scavangeResources(); } catch (e) { console.log("error scavanging:\n", e.stack); }
-    try { loopHelper.sendResourceOrder(empire); } catch (e) { console.log("error reporting transactions:\n", e.stack); }
-    try { loopHelper.initConsoleCommands(); } catch (e) { console.log("error loading console commands:\n", e.stack); }
-    try { sandBox.run(); } catch (e) { console.log("error loading sandbox:\n", e.stack ); }
-    try { loopHelper.garbageCollection(); } catch (e) { console.log("error during garbage collection:\n", e.stack ); }
     Profiler.end("postOperations");
     try { Profiler.finalize(); } catch (e) { console.log("error checking Profiler:\n", e.stack); }
     try { TimeoutTracker.finalize(); } catch (e) { console.log("error finalizing TimeoutTracker:\n", e.stack); }
-    try { loopHelper.grafanaStats(empire); } catch (e) { console.log("error reporting stats:\n", e.stack); }
 };
 

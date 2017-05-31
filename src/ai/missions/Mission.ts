@@ -1,13 +1,7 @@
 import {Operation} from "../operations/Operation";
 import {SpawnGroup} from "../SpawnGroup";
 import {HeadCountOptions, TransportAnalysis} from "../../interfaces";
-import {DESTINATION_REACHED, MAX_HARVEST_DISTANCE, MAX_HARVEST_PATH} from "../../config/constants";
-import {helper} from "../../helpers/helper";
 import {Agent} from "./Agent";
-import {empire} from "../../helpers/loopHelper";
-import {ROOMTYPE_SOURCEKEEPER, WorldMap, ROOMTYPE_ALLEY} from "../WorldMap";
-import {Traveler} from "../Traveler";
-import {RoomHelper} from "../RoomHelper";
 export abstract class Mission {
 
     flag: Flag;
@@ -314,46 +308,7 @@ export abstract class Mission {
 
     // deprecated, use similar function on TransportGuru
     getStorage(pos: RoomPosition): StructureStorage {
-        if (this.memory.tempStorageId) {
-            let storage = Game.getObjectById<StructureStorage>(this.memory.tempStorageId);
-            if (storage) {
-                return storage;
-            }
-            else {
-                console.log("ATTN: Clearing temporary storage id due to not finding object in", this.operation.name);
-                this.memory.tempStorageId = undefined;
-            }
-        }
-
-        // invalidated periodically
-        if (!this.memory.nextStorageCheck || Game.time >= this.memory.nextStorageCheck) {
-            let bestStorages = RoomHelper.findClosest({pos: pos}, empire.network.storages,
-                {linearDistanceLimit: MAX_HARVEST_DISTANCE });
-
-            bestStorages = _.filter(bestStorages, value => value.distance < MAX_HARVEST_PATH);
-
-            let resultPosition;
-            if (bestStorages.length > 0) {
-                let result = bestStorages[0].destination;
-                resultPosition = result.pos;
-                this.memory.storageId = result.id;
-                this.memory.nextStorageCheck = Game.time + helper.randomInterval(10000); // Around 10 hours
-            } else {
-                this.memory.nextStorageCheck = Game.time + 100; // Around 6 minutes
-            }
-            console.log(`MISSION: finding storage for ${this.operation.name}, result: ${resultPosition}`);
-        }
-
-        if (this.memory.storageId) {
-            let storage = Game.getObjectById<StructureStorage>(this.memory.storageId);
-            if (storage && storage.room.controller.level >= 4) {
-                return storage;
-            } else {
-                this.memory.storageId = undefined;
-                this.memory.nextStorageCheck = Game.time;
-                return this.getStorage(pos);
-            }
-        }
+        return null; //Not implemented.
     }
 
     private findOrphans(roleName: string) {
@@ -429,25 +384,7 @@ export abstract class Mission {
     }
 
     protected findDistanceToSpawn(destination: RoomPosition): number {
-        if (!this.memory.distanceToSpawn) {
-            let roomLinearDistance = Game.map.getRoomLinearDistance(this.spawnGroup.pos.roomName, destination.roomName);
-            if (roomLinearDistance <= OBSERVER_RANGE) {
-                let ret = empire.traveler.findTravelPath(this.spawnGroup, {pos: destination});
-                if (ret.incomplete) {
-                    console.log(`SPAWN: error finding distance in ${this.operation.name} for object at ${destination}`);
-                    console.log(`fallback to linearRoomDistance`);
-                    this.memory.distanceToSpawn = roomLinearDistance * 50 + 25;
-                } else {
-                    this.memory.distanceToSpawn = ret.path.length;
-                }
-            }
-            else {
-                console.log(`SPAWN: likely portal travel detected in ${this.operation.name}, setting distance to 200`);
-                this.memory.distanceToSpawn = 200;
-            }
-        }
-
-        return this.memory.distanceToSpawn;
+        throw new Error("Not yet implemented");
     }
 
     protected disableNotify(creep: Creep | Agent) {
@@ -500,76 +437,7 @@ export abstract class Mission {
         const AVOID_COST = 7;
 
         let maxDistance = Game.map.getRoomLinearDistance(start.roomName, finish.roomName);
-        let ret = PathFinder.search(start, [{pos: finish, range: rangeAllowance}], {
-            plainCost: PLAIN_COST,
-            swampCost: SWAMP_COST,
-            maxOps: 12000,
-            roomCallback: (roomName: string): CostMatrix | boolean => {
-
-                // disqualify rooms that involve a circuitous path
-                if (Game.map.getRoomLinearDistance(start.roomName, roomName) > maxDistance) {
-                    return false;
-                }
-
-                // disqualify enemy rooms
-                if (Traveler.checkOccupied(roomName)) {
-                    return false;
-                }
-
-                let room = Game.rooms[roomName];
-                if (!room) {
-                    let roomType = WorldMap.roomTypeFromName(roomName);
-                    if (roomType === ROOMTYPE_ALLEY) {
-                        let matrix = new PathFinder.CostMatrix();
-                        return helper.blockOffExits(matrix, AVOID_COST, roomName);
-                    }
-                    return;
-                }
-
-                let matrix = new PathFinder.CostMatrix();
-                Traveler.addStructuresToMatrix(room, matrix, ROAD_COST);
-
-                // avoid controller
-                if (room.controller) {
-                    helper.blockOffPosition(matrix, room.controller, 3, AVOID_COST);
-                }
-
-                // avoid container/link adjacency
-                let sources = room.find<Source>(FIND_SOURCES);
-                for (let source of sources) {
-                    let structure = source.findMemoStructure<Structure>(STRUCTURE_CONTAINER, 1);
-                    if (!structure) {
-                        structure = source.findMemoStructure<Structure>(STRUCTURE_LINK, 1);
-                    }
-
-                    if (structure) {
-                        helper.blockOffPosition(matrix, structure, 1, AVOID_COST);
-                    }
-                }
-
-                // add construction sites too
-                let constructionSites = room.find<ConstructionSite>(FIND_MY_CONSTRUCTION_SITES);
-                for (let site of constructionSites) {
-                    if (site.structureType === STRUCTURE_ROAD) {
-                        matrix.set(site.pos.x, site.pos.y, ROAD_COST);
-                    }
-                    else {
-                        matrix.set(site.pos.x, site.pos.y, 0xff);
-                    }
-                }
-
-                // avoid going too close to lairs
-                for (let lair of room.findStructures<StructureKeeperLair>(STRUCTURE_KEEPER_LAIR)) {
-                    helper.blockOffPosition(matrix, lair, 1, AVOID_COST);
-                }
-
-                return matrix;
-            },
-        });
-
-        if (!ret.incomplete) {
-            return ret.path;
-        }
+        throw new Error("Not yet implemented.");
     }
 
     private examinePavedPath(path: RoomPosition[]) {

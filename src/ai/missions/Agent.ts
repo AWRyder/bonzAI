@@ -1,10 +1,6 @@
 import {Mission} from "./Mission";
 import {IGOR_CAPACITY} from "../../config/constants";
-import {helper} from "../../helpers/helper";
 import {TravelToOptions, Traveler, TravelData} from "../Traveler";
-import {empire} from "../../helpers/loopHelper";
-import {ROOMTYPE_SOURCEKEEPER, WorldMap} from "../WorldMap";
-import {FleeData} from "../../interfaces";
 import {notifier} from "../../notifier";
 
 export class Agent {
@@ -85,7 +81,7 @@ export class Agent {
 
     public travelTo(destination: {pos: RoomPosition} | RoomPosition, options?: TravelToOptions): number {
         if (destination instanceof RoomPosition) { destination = {pos: destination}; }
-        return empire.traveler.travelTo(this.creep, destination, options);
+        throw new Error("Not yet implemented");
     }
 
     public isFull(margin = 0): boolean {
@@ -193,7 +189,7 @@ export class Agent {
             let direction = this.creep.pos.getDirectionTo(place);
             for (let i = -2; i <= 2; i++) {
                 let relDirection = direction + i;
-                relDirection = helper.clampDirection(relDirection);
+                relDirection = null; // Clamp relative direction here.
                 let position = this.creep.pos.getPositionAtDirection(relDirection);
                 if (!position.inRangeTo(place, acceptableRange)) continue;
                 if (position.lookForStructure(STRUCTURE_ROAD)) continue;
@@ -219,13 +215,13 @@ export class Agent {
             if (!position) { return; }
             return this.travelTo({pos: position}) as number;
         }
-
-        return this.travelTo(place) as number;
+        throw new Error("Not yet implemented.");
+        //return this.travelTo(place) as number;
     }
 
     private cacheIdlePosition(place: {pos: RoomPosition}, acceptableRange: number): RoomPosition {
         if (this.memory.idlePosition) {
-            let position = helper.deserializeRoomPosition(this.memory.idlePosition);
+            let position = null;// Deserialize the room position here. //helper.deserializeRoomPosition(this.memory.idlePosition);
             let range = position.getRangeTo(place);
             if (range === 0) {
                 return position;
@@ -340,34 +336,7 @@ export class Agent {
     }
 
     avoidSK(destination: Flag): number {
-        let costCall = (roomName: string, matrix: CostMatrix): CostMatrix | boolean => {
-            if (roomName !== this.pos.roomName) return;
-            let room = Game.rooms[this.pos.roomName];
-            let sourceKeepers = _.filter(room.hostiles, (c: Creep) => c.owner.username === "Source Keeper");
-            for (let sourceKeeper of sourceKeepers) {
-                const SAFE_RANGE = 4;
-                if (this.pos.getRangeTo(sourceKeeper) < SAFE_RANGE) continue;
-                for (let xDelta = -SAFE_RANGE; xDelta <= SAFE_RANGE; xDelta++) {
-                    for (let yDelta = -SAFE_RANGE; yDelta <= SAFE_RANGE; yDelta++) {
-                        matrix.set(sourceKeeper.pos.x + xDelta, sourceKeeper.pos.y + yDelta, 0xff);
-                    }
-                }
-            }
-            return matrix;
-        };
-
-        let options: TravelToOptions = {};
-        if (this.room.roomType === ROOMTYPE_SOURCEKEEPER) {
-            options.roomCallback = costCall;
-            let hostileCount = this.creep.room.hostiles.length;
-            if (!this.memory.hostileCount) this.memory.hostileCount = 0;
-            if (hostileCount > this.memory.hostileCount) {
-                this.resetTravelPath();
-            }
-            this.memory.hostileCount = hostileCount;
-        }
-
-        return this.travelTo(destination, options) as number;
+        throw new Error("Not yet implemented.");
     }
 
     resetTravelPath() {
@@ -384,119 +353,11 @@ export class Agent {
     }
 
     fleeByPath(fleeObjects: {pos: RoomPosition}[], fleeRange: number, fleeDelay: number, confineToRoom = false): boolean {
-
-        let closest = this.pos.findClosestByRange(fleeObjects);
-        let rangeToClosest = 50;
-        if (closest) { rangeToClosest = this.pos.getRangeTo(closest); }
-
-        if (rangeToClosest > fleeRange) {
-            if (!this.memory._flee) {
-                return false; // where most creeps exit function
-            }
-
-            let fleeData = this.memory._flee;
-
-            if (this.pos.isNearExit(0)) {
-                this.moveOffExit();
-                return true;
-            }
-
-            if (fleeData.delay <= 0) {
-                delete this.memory._flee;
-                return false; // safe to resume
-            }
-            fleeData.delay--;
-
-            return true;
-        }
-
-        if (this.fatigue > 0) {
-            if (closest instanceof Creep) {
-                let moveCount = this.getActiveBodyparts(MOVE);
-                let dropAmount = this.carry.energy - (moveCount * CARRY_CAPACITY);
-                this.drop(RESOURCE_ENERGY, dropAmount);
-            }
-            return true;
-        }
-
-        if (!this.memory._flee) { this.memory._flee = {} as FleeData; }
-
-        let fleeData = this.memory._flee as FleeData;
-        fleeData.delay = fleeDelay;
-
-        if (fleeData.nextPos) {
-            let position = helper.deserializeRoomPosition(fleeData.nextPos);
-            if (this.arrivedAtPosition(position)) {
-                fleeData.path = fleeData.path.substr(1);
-            } else {
-                fleeData.path = undefined;
-            }
-        }
-
-        if (fleeData.path) {
-            if (fleeData.path.length > 0) {
-                let nextDirection = parseInt(fleeData.path[0], 10);
-                let position = this.pos.getPositionAtDirection(nextDirection);
-                if (!position.isNearExit(0) &&
-                    position.findClosestByRange(fleeObjects).pos.getRangeTo(position) < rangeToClosest) {
-                    fleeData.path = undefined;
-                } else {
-                    this.move(nextDirection);
-                    fleeData.nextPos = position;
-                    return true;
-                }
-            } else {
-                fleeData.path = undefined;
-            }
-        }
-
-        if (!fleeData.path) {
-            let avoidance = _.map(fleeObjects, obj => { return {pos: obj.pos, range: 10 }; });
-
-            let ret = PathFinder.search(this.pos, avoidance, {
-                flee: true,
-                maxRooms: confineToRoom ? 1 : undefined,
-                roomCallback: (roomName: string): CostMatrix|boolean => {
-                    if (Traveler.checkOccupied(roomName)) { return false; }
-                    if (roomName === this.room.name) { return empire.traveler.getCreepMatrix(this.room); }
-                    if (Game.rooms[roomName]) { return empire.traveler.getStructureMatrix(Game.rooms[roomName]); }
-                }
-            });
-
-            if (ret.path.length === 0) { return true; }
-
-            fleeData.path = Traveler.serializePath(this.pos, ret.path);
-        }
-
-        let nextDirection = parseInt(fleeData.path[0], 10);
-        fleeData.nextPos = this.pos.getPositionAtDirection(nextDirection);
-        this.move(nextDirection);
-        return true;
+        throw new Error("Not yet implemented.");
     }
 
     retreat(avoidObjects?: {pos: RoomPosition}[], fleeRange = 5): number {
-        if (!avoidObjects) {
-            avoidObjects = this.room.fleeObjects;
-        }
-
-        let avoidance = _.map(this.pos.findInRange(avoidObjects, fleeRange + 1),
-            (c: Creep) => { return {pos: c.pos, range: 20 }; });
-
-
-        let ret = PathFinder.search(this.pos, avoidance, {
-            flee: true,
-            roomCallback: (roomName: string): CostMatrix|boolean => {
-                if (Traveler.checkOccupied(roomName)) { return false; }
-                if (roomName === this.room.name) { return empire.traveler.getCreepMatrix(this.room); }
-                if (Game.rooms[roomName]) { return empire.traveler.getStructureMatrix(Game.rooms[roomName]); }
-            }
-        });
-
-        if (ret.path.length > 0) {
-            return this.creep.move(this.pos.getDirectionTo(ret.path[0]));
-        } else {
-            return OK;
-        }
+       throw new Error("Not yet implemented.");
     }
 
     /**
@@ -549,30 +410,7 @@ export class Agent {
      * @returns {number}
      */
     public yieldRoad(target: {pos: RoomPosition}, allowSwamps = true): number  {
-        let isOffRoad = this.pos.lookForStructure(STRUCTURE_ROAD) === undefined;
-        if (isOffRoad) return OK;
-
-        let swampPosition;
-        // find movement options
-        let direction = this.pos.getDirectionTo(target);
-        for (let i = -2; i <= 2; i++) {
-            let relDirection = direction + i;
-            relDirection = helper.clampDirection(relDirection);
-            let position = this.pos.getPositionAtDirection(relDirection);
-            if (!position.inRangeTo(target, 3)) continue;
-            if (position.lookFor(LOOK_STRUCTURES).length > 0) continue;
-            if (!position.isPassible()) continue;
-            if (position.isNearExit(0)) continue;
-            if (position.lookFor(LOOK_TERRAIN)[0] === "swamp") {
-                swampPosition = position;
-                continue;
-            }
-            return this.move(relDirection);
-        }
-        if (swampPosition && allowSwamps) {
-            return this.move(this.pos.getDirectionTo(swampPosition));
-        }
-        return this.travelTo(target);
+        throw new Error("Not yet implemented.");
     };
 
     /**

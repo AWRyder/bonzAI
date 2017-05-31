@@ -45,28 +45,11 @@ export class Diplomat {
 }
 
 export const ALLIES = {
-    "taiga": true,
-    "Reini": true,
-    "bonzaiferroni": true,
-    "SteeleR": true,
-    "Vervorris": true,
-    "Jeb": true,
-    "danny": true,
-    "Atavus": true,
-    "Ashburnie": true,
-    "ricane": true,
-    "trebbettes": true,
-    "bovius": true,
+
 };
 
 export const TRADE_PARTNERS = {
-    "bonzaiferroni": true,
-    "taiga": true,
-    "Reini": true,
-    "Vervorris": true,
-    "Jeb": true,
-    "trebbettes": true,
-    "ricane": true,
+
 };
 
 export const FOES = {

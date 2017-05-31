@@ -1,5 +1,4 @@
 import {Operation} from "./ai/operations/Operation";
-import {Empire} from "./ai/Empire";
 import {Agent} from "./ai/missions/Agent";
 import {SpawnGroup} from "./ai/SpawnGroup";
 
@@ -16,7 +15,6 @@ export interface bonzAI {
         placedRoad: boolean;
     };
     operations: {[opName: string]: Operation }
-    empire: Empire;
 }
 
 export interface TransportAnalysis {

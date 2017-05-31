@@ -1,4 +1,3 @@
-import {RESERVE_AMOUNT} from "../ai/TradeNetwork";
 export const DESTINATION_REACHED = -1201;
 export const CACHE_INVALIDATION_FREQUENCY = 1000;
 export const CACHE_INVALIDATION_PERIOD = 10;
@@ -18,6 +17,7 @@ export const LOADAMOUNT_MINERAL = Math.ceil(33 / 6);
 
 export const USERNAME = _.first(_.toArray(Game.structures)).owner.username;
 
+export const RESERVE_AMOUNT = 5000;
 export enum OperationPriority { Emergency, OwnedRoom, VeryHigh, High, Medium, Low, VeryLow }
 export enum Direction { North = 1, NorthEast = 2, East = 3, SouthEast = 4, South = 5, SouthWest = 6, West = 7, NorthWest = 8 }
 export const IGOR_CAPACITY = 1000;
